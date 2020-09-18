@@ -61,6 +61,7 @@ import qualified Mason.Builder as Mason
 import qualified LeanHttpClient.Mason as Mason
 import qualified Data.Aeson as Aeson
 import qualified Network.HTTP.Client.TLS
+import qualified Data.ByteString.Char8 as Bs8
 
 
 -- *
@@ -149,7 +150,11 @@ performPut timeout maxRedirects secure host portMb path query requestHeaders req
 performRequest :: Client.Request -> ResponseParser a -> Session a
 performRequest request (ResponseParser parseResponse) =
   Session $ \ manager ->
-    catch (Client.withResponse request manager parseResponse) (return . Left . normalizeRawException)
+    do
+      case Client.requestBody request of
+        Client.RequestBodyBS bytes -> traceM (">>> " <> Bs8.unpack bytes)
+        _ -> traceM (">>> Unsupported data")
+      catch (Client.withResponse request manager parseResponse) (return . Left . normalizeRawException)
 
 
 -- * HTTP-Client Assemblage
@@ -276,7 +281,11 @@ lookupInResponseHeaders =
 parseResponseBodyBytes :: BsAttoparsec.Parser a -> ResponseParser a
 parseResponseBodyBytes parser =
   ResponseParser $ \ response ->
-    BsAttoparsec.parseWith (Client.responseBody response) parser "" &
+    Client.responseBody response &
+    Client.brConsume &
+    fmap mconcat &
+    fmap (traceMapId (mappend "<<< " . Bs8.unpack)) &
+    fmap (BsAttoparsec.parse parser) &
     fmap (\ case
         BsAttoparsec.Done _ a ->
           Right a

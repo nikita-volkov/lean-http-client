@@ -2,6 +2,7 @@ module LeanHttpClient.Prelude
 (
   module Exports,
   showAsText,
+  traceMapId,
 )
 where
 
@@ -144,3 +145,7 @@ import Data.Set as Exports (Set)
 
 showAsText :: Show a => a -> Text
 showAsText = show >>> fromString
+
+traceMapId :: (a -> String) -> a -> a
+traceMapId show a =
+  trace (show a) a
