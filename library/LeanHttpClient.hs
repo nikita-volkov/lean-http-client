@@ -24,12 +24,6 @@ module LeanHttpClient
   -- ** Path
   Path,
   textPath,
-  assemblePathString,
-  -- ** Query
-  Query,
-  flagQueryParam,
-  assocQueryParam,
-  assembleQueryString,
   -- ** Request headers
   RequestHeaders,
   requestHeader,
@@ -40,6 +34,9 @@ module LeanHttpClient
   -- ** Response headers parsing
   ResponseHeaders,
   lookupInResponseHeaders,
+  -- * Utils
+  assemblePathString,
+  assembleQueryString,
 )
 where
 
@@ -118,7 +115,7 @@ runSessionOnGlobalManager session =
 
 performGet ::
   DiffTime -> Int ->
-  Bool -> Host -> Maybe Word16 -> Path -> Query ->
+  Bool -> Host -> Maybe Word16 -> Path -> [(Text, Text)] ->
   RequestHeaders ->
   ResponseParser a ->
   Session a
@@ -128,7 +125,7 @@ performGet timeout maxRedirects secure host portMb path query requestHeaders =
 
 performPost ::
   DiffTime -> Int ->
-  Bool -> Host -> Maybe Word16 -> Path -> Query ->
+  Bool -> Host -> Maybe Word16 -> Path -> [(Text, Text)] ->
   RequestHeaders -> ByteString ->
   ResponseParser a ->
   Session a
@@ -138,7 +135,7 @@ performPost timeout maxRedirects secure host portMb path query requestHeaders re
 
 performPut ::
   DiffTime -> Int ->
-  Bool -> Host -> Maybe Word16 -> Path -> Query ->
+  Bool -> Host -> Maybe Word16 -> Path -> [(Text, Text)] ->
   RequestHeaders -> ByteString ->
   ResponseParser a ->
   Session a
@@ -163,23 +160,37 @@ assemblePathString (Path seq) =
       Mason.toStrictByteString $
       foldMap (mappend "/" . Mason.percentEncodedPathSegmentText) seq
 
-assembleRawQueryParam :: QueryParam -> Mason.Builder
-assembleRawQueryParam =
-  \ case
-    FlagQueryParam name ->
-      Mason.percentEncodedQuerySegmentText name
-    AssocQueryParam name value ->
-      Mason.percentEncodedQuerySegmentText name <> Mason.char7 '=' <> Mason.percentEncodedQuerySegmentText value
+{-|
+Create a query string with all those ampersands and percent-encoding
+from textual key-value pairs.
 
-assembleQueryString :: Query -> ByteString
-assembleQueryString (Query querySeq) =
-  if Seq.null querySeq
-    then
-      mempty
-    else
-      Mason.toStrictByteString $
-        Mason.char7 '?' <>
-        Mason.intersperse "&" (fmap assembleRawQueryParam (toList querySeq))
+If value in a pair is empty,
+then no @=@ will be inserted.
+-}
+assembleQueryString :: Foldable f => f (Text, Text) -> ByteString
+assembleQueryString f =
+  foldr step finalize f True mempty
+  where
+    step (k, v) next first mason =
+      next False newMason
+      where
+        newMason =
+          if first
+            then
+              Mason.char7 '?' <> param
+            else
+              mason <> Mason.char7 '&' <> param
+          where
+            param =
+              if Text.null v
+                then
+                  Mason.percentEncodedQuerySegmentText k
+                else
+                  Mason.percentEncodedQuerySegmentText k <>
+                  Mason.char7 '=' <>
+                  Mason.percentEncodedQuerySegmentText v
+    finalize _ mason =
+      Mason.toStrictByteString mason
 
 assembleRawHeaders :: RequestHeaders -> [(CI ByteString, ByteString)]
 assembleRawHeaders (RequestHeaders seq) =
@@ -190,7 +201,7 @@ assembleRawHeaders (RequestHeaders seq) =
 
 assembleRawRequest ::
   DiffTime -> Int -> ByteString ->
-  Bool -> Host -> Maybe Word16 -> Path -> Query ->
+  Bool -> Host -> Maybe Word16 -> Path -> [(Text, Text)] ->
   RequestHeaders -> ByteString ->
   Client.Request
 assembleRawRequest timeout maxRedirects method secure host portMb path query requestHeaders body =
@@ -331,22 +342,6 @@ instance IsString Path where
 textPath :: Text -> Path
 textPath =
   Path . Seq.fromList . Text.split (== '/') . Text.dropAround (== '/')
-
-
--- * Query
--------------------------
-
-newtype Query =
-  Query (Seq QueryParam)
-  deriving (Semigroup, Monoid)
-
-flagQueryParam :: Text -> Query
-flagQueryParam name =
-  Query $ pure $ FlagQueryParam name
-
-assocQueryParam :: Text -> Text -> Query
-assocQueryParam name value =
-  Query $ pure $ AssocQueryParam name value
 
 
 -- * RequestHeaders
