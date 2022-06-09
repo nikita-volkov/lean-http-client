@@ -84,6 +84,7 @@ import GHC.Conc as Exports hiding (orElse, threadWaitRead, threadWaitReadSTM, th
 import GHC.Exts as Exports (IsList (..), groupWith, inline, lazy, sortWith)
 import GHC.Generics as Exports (Generic)
 import GHC.IO.Exception as Exports
+import IsomorphismClass as Exports
 import Numeric as Exports
 import System.Environment as Exports
 import System.Exit as Exports

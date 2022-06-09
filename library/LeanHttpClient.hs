@@ -34,6 +34,7 @@ module LeanHttpClient
     ResponseParser,
     extractHeaders,
     parseJsonBody,
+    deserializeResponseBody,
 
     -- ** Response headers parsing
     ResponseHeaders,
@@ -55,6 +56,7 @@ import qualified Data.ByteString as ByteString
 import qualified Data.CaseInsensitive as Ci
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Sequence as Seq
+import qualified Data.Serialize as Cereal
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import Distillery.Extractor (Extractor (..))
@@ -287,6 +289,17 @@ lookupInResponseHeaders =
   lmap coerce . Extractor.atHashMapKey . Text.toCaseFold
 
 -------------------------
+
+deserializeResponseBody :: Cereal.Get a -> ResponseParser a
+deserializeResponseBody get =
+  ResponseParser $ go (Cereal.runGetPartial get) . Client.responseBody
+  where
+    go decode bodyReader = do
+      chunk <- Client.brRead bodyReader
+      case decode chunk of
+        Cereal.Done res _ -> return $ Right res
+        Cereal.Fail err _ -> return $ Left $ UnexpectedResponseErr $ to err
+        Cereal.Partial decodeNext -> go decodeNext bodyReader
 
 parseResponseBodyBytes :: BsAttoparsec.Parser a -> ResponseParser a
 parseResponseBodyBytes parser =

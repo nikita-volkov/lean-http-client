@@ -4,3 +4,5 @@ extra-deps:
   - punycode-2.0
   - git: https://github.com/nikita-volkov/distillery
     commit: 2c2905f2addb0d1925c43d427fcf65340ee64b2a
+  - git: https://github.com/nikita-volkov/isomorphism-class
+    commit: 33e2a25e9adeabed528d859c6e4a605062e48437

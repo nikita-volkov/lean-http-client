@@ -29,6 +29,17 @@ packages:
   original:
     commit: 2c2905f2addb0d1925c43d427fcf65340ee64b2a
     git: https://github.com/nikita-volkov/distillery
+- completed:
+    name: isomorphism-class
+    pantry-tree:
+      sha256: 562f1bc2d85a507c3b18cd5f1691f2b0a398363e243ada5c6160e291a458665f
+      size: 692
+    commit: 33e2a25e9adeabed528d859c6e4a605062e48437
+    git: https://github.com/nikita-volkov/isomorphism-class
+    version: '0.1'
+  original:
+    commit: 33e2a25e9adeabed528d859c6e4a605062e48437
+    git: https://github.com/nikita-volkov/isomorphism-class
 snapshots:
 - completed:
     sha256: 869e23c4f7367895ae63b129255b70bc8b4b965229aa258f6c50141c6b10ae76
