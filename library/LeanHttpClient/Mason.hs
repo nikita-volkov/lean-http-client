@@ -1,12 +1,11 @@
 module LeanHttpClient.Mason where
 
-import LeanHttpClient.Prelude hiding (intersperse)
-import Mason.Builder
+import qualified Data.ByteString as ByteString
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
-import qualified Data.ByteString as ByteString
 import qualified Data.Text.Punycode as Punycode
-
+import LeanHttpClient.Prelude hiding (intersperse)
+import Mason.Builder
 
 percentEncodedPathSegmentText :: Text -> Builder
 percentEncodedPathSegmentText =
@@ -18,19 +17,21 @@ percentEncodedPathSegmentBytes =
 
 percentEncodedPathSegmentByte :: Word8 -> Builder
 percentEncodedPathSegmentByte x =
-  let
-    reserved =
-      x >= 65 && x <= 90 ||
-      x >= 97 && x <= 122 ||
-      x >= 48 && x <= 57 ||
-      x >= 43 && x <= 46 ||
-      x == 95 || x == 126 ||
-      x == 58 || x == 64 || x == 38 || x == 61 || x == 36
-    in if reserved
-      then
-        word8 x
-      else
-        percentEncodedByte x
+  let reserved =
+        x >= 65 && x <= 90
+          || x >= 97 && x <= 122
+          || x >= 48 && x <= 57
+          || x >= 43 && x <= 46
+          || x == 95
+          || x == 126
+          || x == 58
+          || x == 64
+          || x == 38
+          || x == 61
+          || x == 36
+   in if reserved
+        then word8 x
+        else percentEncodedByte x
 
 percentEncodedQuerySegmentText :: Text -> Builder
 percentEncodedQuerySegmentText =
@@ -42,17 +43,17 @@ percentEncodedQuerySegmentBytes =
 
 percentEncodedQuerySegmentByte :: Word8 -> Builder
 percentEncodedQuerySegmentByte x =
-  let
-    reserved =
-      x >= 65 && x <= 90 ||
-      x >= 97 && x <= 122 ||
-      x >= 48 && x <= 57 ||
-      x == 45 || x == 95 || x == 46 || x == 126
-    in if reserved
-      then
-        word8 x
-      else
-        percentEncodedByte x
+  let reserved =
+        x >= 65 && x <= 90
+          || x >= 97 && x <= 122
+          || x >= 48 && x <= 57
+          || x == 45
+          || x == 95
+          || x == 46
+          || x == 126
+   in if reserved
+        then word8 x
+        else percentEncodedByte x
 
 percentEncodedByte :: Word8 -> Builder
 percentEncodedByte x =
