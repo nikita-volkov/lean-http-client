@@ -34,7 +34,7 @@ module LeanHttpClient
     ResponseParser,
     extractHeaders,
     parseJsonBody,
-    deserializeResponseBody,
+    deserializeBodyWithCereal,
 
     -- ** Response headers parsing
     ResponseHeaders,
@@ -290,8 +290,8 @@ lookupInResponseHeaders =
 
 -------------------------
 
-deserializeResponseBody :: Cereal.Get a -> ResponseParser a
-deserializeResponseBody get =
+deserializeBodyWithCereal :: Cereal.Get a -> ResponseParser a
+deserializeBodyWithCereal get =
   ResponseParser $ go (Cereal.runGetPartial get) . Client.responseBody
   where
     go decode bodyReader = do
