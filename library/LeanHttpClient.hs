@@ -59,11 +59,11 @@ import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import Distillery.Extractor (Extractor (..))
 import qualified Distillery.Extractor as Extractor
-import qualified LeanHttpClient.Mason as Mason
 import LeanHttpClient.Prelude hiding (get, put)
-import qualified Mason.Builder as Mason
+import qualified LeanHttpClient.Serialization as Serialization
 import qualified Network.HTTP.Client as Client
 import qualified Network.HTTP.Client.TLS
+import qualified PtrPoker.Write as Serialization
 
 -------------------------
 
@@ -175,8 +175,8 @@ assemblePathString (Path seq) =
   if Seq.null seq
     then "/"
     else
-      Mason.toStrictByteString $
-        foldMap (mappend "/" . Mason.percentEncodedPathSegmentText) seq
+      Serialization.toStrictByteString $
+        foldMap (mappend "/" . Serialization.percentEncodedPathSegmentText) seq
 
 -- |
 -- Create a query string with all those ampersands and percent-encoding
@@ -193,18 +193,18 @@ assembleQueryString f =
       where
         newMason =
           if first
-            then Mason.char7 '?' <> param
-            else mason <> Mason.char7 '&' <> param
+            then Serialization.char7 '?' <> param
+            else mason <> Serialization.char7 '&' <> param
           where
             param =
               if Text.null v
-                then Mason.percentEncodedQuerySegmentText k
+                then Serialization.percentEncodedQuerySegmentText k
                 else
-                  Mason.percentEncodedQuerySegmentText k
-                    <> Mason.char7 '='
-                    <> Mason.percentEncodedQuerySegmentText v
+                  Serialization.percentEncodedQuerySegmentText k
+                    <> Serialization.char7 '='
+                    <> Serialization.percentEncodedQuerySegmentText v
     finalize _ mason =
-      Mason.toStrictByteString mason
+      Serialization.toStrictByteString mason
 
 assembleRawHeaders :: RequestHeaders -> [(CI ByteString, ByteString)]
 assembleRawHeaders (RequestHeaders seq) =
@@ -334,7 +334,7 @@ instance IsString Host where
 
 textHost :: Text -> Host
 textHost =
-  Host . Mason.toStrictByteString . Mason.domain
+  Host . Serialization.toStrictByteString . Serialization.domain
 
 -- * Path
 

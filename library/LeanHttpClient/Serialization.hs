@@ -1,21 +1,21 @@
-module LeanHttpClient.Mason where
+module LeanHttpClient.Serialization where
 
 import qualified Data.ByteString as ByteString
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import qualified Data.Text.Punycode as Punycode
-import LeanHttpClient.Prelude hiding (intersperse)
-import Mason.Builder
+import LeanHttpClient.Prelude
+import PtrPoker.Write
 
-percentEncodedPathSegmentText :: Text -> Builder
+percentEncodedPathSegmentText :: Text -> Write
 percentEncodedPathSegmentText =
   percentEncodedPathSegmentBytes . Text.encodeUtf8
 
-percentEncodedPathSegmentBytes :: ByteString -> Builder
+percentEncodedPathSegmentBytes :: ByteString -> Write
 percentEncodedPathSegmentBytes =
   foldMap percentEncodedPathSegmentByte . ByteString.unpack
 
-percentEncodedPathSegmentByte :: Word8 -> Builder
+percentEncodedPathSegmentByte :: Word8 -> Write
 percentEncodedPathSegmentByte x =
   let reserved =
         x >= 65 && x <= 90
@@ -33,15 +33,15 @@ percentEncodedPathSegmentByte x =
         then word8 x
         else percentEncodedByte x
 
-percentEncodedQuerySegmentText :: Text -> Builder
+percentEncodedQuerySegmentText :: Text -> Write
 percentEncodedQuerySegmentText =
   percentEncodedQuerySegmentBytes . Text.encodeUtf8
 
-percentEncodedQuerySegmentBytes :: ByteString -> Builder
+percentEncodedQuerySegmentBytes :: ByteString -> Write
 percentEncodedQuerySegmentBytes =
   foldMap percentEncodedQuerySegmentByte . ByteString.unpack
 
-percentEncodedQuerySegmentByte :: Word8 -> Builder
+percentEncodedQuerySegmentByte :: Word8 -> Write
 percentEncodedQuerySegmentByte x =
   let reserved =
         x >= 65 && x <= 90
@@ -55,21 +55,24 @@ percentEncodedQuerySegmentByte x =
         then word8 x
         else percentEncodedByte x
 
-percentEncodedByte :: Word8 -> Builder
+percentEncodedByte :: Word8 -> Write
 percentEncodedByte x =
   case divMod x 16 of
     (a, b) -> word8 37 <> asciiHexDigit a <> asciiHexDigit b
 
-asciiHexDigit :: Word8 -> Builder
+asciiHexDigit :: Word8 -> Write
 asciiHexDigit x =
   word8 (if x < 10 then 48 + x else 55 + x)
 
-domain :: Text -> Builder
+domain :: Text -> Write
 domain =
-  intersperse (char7 '.') . fmap domainSegment . Text.split (== '.')
+  mconcat . intersperse (asciiChar '.') . fmap domainSegment . Text.split (== '.')
 
-domainSegment :: Text -> Builder
+domainSegment :: Text -> Write
 domainSegment value =
   if Text.all (< '\x80') value
     then textUtf8 value
     else byteString "xn--" <> byteString (Punycode.encode value)
+
+asciiChar :: Char -> Write
+asciiChar = word8 . fromIntegral . ord
