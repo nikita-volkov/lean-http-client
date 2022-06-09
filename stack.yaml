@@ -1,1 +1,7 @@
-resolver: https://raw.githubusercontent.com/nikita-volkov/stack-snapshot/4ba8b7b0030e52dcc2b7592bc577a4046c390487/snapshot.yaml
+resolver: nightly-2022-06-08
+extra-deps:
+  - aeson-value-parser-0.19.7
+  - mason-0.2.5
+  - punycode-2.0
+  - git: https://github.com/nikita-volkov/distillery
+    commit: 2c2905f2addb0d1925c43d427fcf65340ee64b2a
