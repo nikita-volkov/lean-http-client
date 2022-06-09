@@ -6,6 +6,15 @@ import qualified Data.Text.Encoding as Text
 import qualified Data.Text.Punycode as Punycode
 import LeanHttpClient.Prelude
 import PtrPoker.Write
+import qualified PtrPoker.Write as Write
+
+-- * Execution
+
+execute :: Write -> ByteString
+execute =
+  Write.writeToByteString
+
+-- * Definitions
 
 percentEncodedPathSegmentText :: Text -> Write
 percentEncodedPathSegmentText =

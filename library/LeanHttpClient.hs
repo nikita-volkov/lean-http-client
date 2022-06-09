@@ -63,7 +63,6 @@ import LeanHttpClient.Prelude hiding (get, put)
 import qualified LeanHttpClient.Serialization as Serialization
 import qualified Network.HTTP.Client as Client
 import qualified Network.HTTP.Client.TLS
-import qualified PtrPoker.Write as Write
 
 -------------------------
 
@@ -175,7 +174,7 @@ assemblePathString (Path seq) =
   if Seq.null seq
     then "/"
     else
-      Write.writeToByteString $
+      Serialization.execute $
         foldMap (mappend "/" . Serialization.percentEncodedPathSegmentText) seq
 
 -- |
@@ -188,13 +187,13 @@ assembleQueryString :: Foldable f => f (Text, Text) -> ByteString
 assembleQueryString f =
   foldr step finalize f True mempty
   where
-    step (k, v) next first mason =
+    step (k, v) next first bdr =
       next False newMason
       where
         newMason =
           if first
             then Serialization.asciiChar '?' <> param
-            else mason <> Serialization.asciiChar '&' <> param
+            else bdr <> Serialization.asciiChar '&' <> param
           where
             param =
               if Text.null v
@@ -203,8 +202,8 @@ assembleQueryString f =
                   Serialization.percentEncodedQuerySegmentText k
                     <> Serialization.asciiChar '='
                     <> Serialization.percentEncodedQuerySegmentText v
-    finalize _ mason =
-      Write.writeToByteString mason
+    finalize _ bdr =
+      Serialization.execute bdr
 
 assembleRawHeaders :: RequestHeaders -> [(CI ByteString, ByteString)]
 assembleRawHeaders (RequestHeaders seq) =
@@ -334,7 +333,7 @@ instance IsString Host where
 
 textHost :: Text -> Host
 textHost =
-  Host . Write.writeToByteString . Serialization.domain
+  Host . Serialization.execute . Serialization.domain
 
 -- * Path
 
