@@ -63,7 +63,7 @@ import LeanHttpClient.Prelude hiding (get, put)
 import qualified LeanHttpClient.Serialization as Serialization
 import qualified Network.HTTP.Client as Client
 import qualified Network.HTTP.Client.TLS
-import qualified PtrPoker.Write as Serialization
+import qualified PtrPoker.Write as Write
 
 -------------------------
 
@@ -175,7 +175,7 @@ assemblePathString (Path seq) =
   if Seq.null seq
     then "/"
     else
-      Serialization.toStrictByteString $
+      Write.writeToByteString $
         foldMap (mappend "/" . Serialization.percentEncodedPathSegmentText) seq
 
 -- |
@@ -193,18 +193,18 @@ assembleQueryString f =
       where
         newMason =
           if first
-            then Serialization.char7 '?' <> param
-            else mason <> Serialization.char7 '&' <> param
+            then Serialization.asciiChar '?' <> param
+            else mason <> Serialization.asciiChar '&' <> param
           where
             param =
               if Text.null v
                 then Serialization.percentEncodedQuerySegmentText k
                 else
                   Serialization.percentEncodedQuerySegmentText k
-                    <> Serialization.char7 '='
+                    <> Serialization.asciiChar '='
                     <> Serialization.percentEncodedQuerySegmentText v
     finalize _ mason =
-      Serialization.toStrictByteString mason
+      Write.writeToByteString mason
 
 assembleRawHeaders :: RequestHeaders -> [(CI ByteString, ByteString)]
 assembleRawHeaders (RequestHeaders seq) =
@@ -285,7 +285,7 @@ extractHeaders extractor =
 
 lookupInResponseHeaders :: Text -> Extractor ResponseHeaders Text
 lookupInResponseHeaders =
-  lmap coerce . Extractor.lookupInHashMap . Text.toCaseFold
+  lmap coerce . Extractor.atHashMapKey . Text.toCaseFold
 
 -------------------------
 
@@ -334,7 +334,7 @@ instance IsString Host where
 
 textHost :: Text -> Host
 textHost =
-  Host . Serialization.toStrictByteString . Serialization.domain
+  Host . Write.writeToByteString . Serialization.domain
 
 -- * Path
 
