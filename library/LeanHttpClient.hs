@@ -101,9 +101,41 @@ data QueryParam
   = FlagQueryParam Text
   | AssocQueryParam Text Text
 
+newtype Host
+  = Host ByteString
+
+instance IsString Host where
+  fromString =
+    textHost . fromString
+
+newtype Path
+  = Path (Seq Text)
+  deriving (Semigroup, Monoid)
+
+instance IsString Path where
+  fromString =
+    textPath . fromString
+
+newtype RequestHeaders
+  = RequestHeaders (Seq (Text, Text))
+  deriving (Semigroup, Monoid)
+
 data Config = Config
   { configTimeout :: DiffTime,
     configMaxRedirects :: Int
+  }
+
+data Url = Url
+  { -- | HTTPS? HTTP otherwise.
+    urlSecure :: !Bool,
+    -- | Host name.
+    urlHost :: !Host,
+    -- | Specific port if present. Default port for the protocol otherwise.
+    urlPort :: !(Maybe Word16),
+    -- | Path at the host.
+    urlPath :: !Path,
+    -- | Query params.
+    urlQuery :: ![(Text, Text)]
   }
 
 data Request a
@@ -135,45 +167,33 @@ overrideMaxRedirects =
   error "TODO"
 
 performGet ::
-  Bool ->
-  Host ->
-  Maybe Word16 ->
-  Path ->
-  [(Text, Text)] ->
+  Url ->
   RequestHeaders ->
   ResponseParser a ->
   Session a
-performGet secure host portMb path query requestHeaders =
+performGet url requestHeaders =
   performRequest
-    (assembleRawRequest "GET" secure host portMb path query requestHeaders mempty)
+    (assembleRawRequest "GET" url requestHeaders mempty)
 
 performPost ::
-  Bool ->
-  Host ->
-  Maybe Word16 ->
-  Path ->
-  [(Text, Text)] ->
+  Url ->
   RequestHeaders ->
   ByteString ->
   ResponseParser a ->
   Session a
-performPost secure host portMb path query requestHeaders requestBody =
+performPost url requestHeaders requestBody =
   performRequest
-    (assembleRawRequest "POST" secure host portMb path query requestHeaders requestBody)
+    (assembleRawRequest "POST" url requestHeaders requestBody)
 
 performPut ::
-  Bool ->
-  Host ->
-  Maybe Word16 ->
-  Path ->
-  [(Text, Text)] ->
+  Url ->
   RequestHeaders ->
   ByteString ->
   ResponseParser a ->
   Session a
-performPut secure host portMb path query requestHeaders requestBody =
+performPut url requestHeaders requestBody =
   performRequest
-    (assembleRawRequest "PUT" secure host portMb path query requestHeaders requestBody)
+    (assembleRawRequest "PUT" url requestHeaders requestBody)
 
 performRequest :: (Config -> Client.Request) -> ResponseParser a -> Session a
 performRequest request (ResponseParser parseResponse) =
@@ -181,6 +201,25 @@ performRequest request (ResponseParser parseResponse) =
     catch
       (Client.withResponse (request conf) manager parseResponse)
       (return . Left . normalizeRawException)
+
+-- * Url
+
+-------------------------
+
+-- | Assemble a URL for a request.
+url ::
+  -- | HTTPS? HTTP otherwise.
+  Bool ->
+  -- | Host name.
+  Host ->
+  -- | Specific port if present. Default port for the protocol otherwise.
+  Maybe Word16 ->
+  -- | Path at the host.
+  Path ->
+  -- | Query params.
+  [(Text, Text)] ->
+  Url
+url = Url
 
 -- * HTTP-Client Assemblage
 
@@ -231,37 +270,23 @@ assembleRawHeaders (RequestHeaders seq) =
 
 assembleRawRequest ::
   ByteString ->
-  Bool ->
-  Host ->
-  Maybe Word16 ->
-  Path ->
-  [(Text, Text)] ->
+  Url ->
   RequestHeaders ->
   ByteString ->
   Config ->
   Client.Request
-assembleRawRequest method secure host portMb path query requestHeaders body Config {..} =
+assembleRawRequest method Url {..} requestHeaders body Config {..} =
   Client.defaultRequest
-    { Client.host =
-        coerce host,
-      Client.port =
-        maybe (bool 80 443 secure) fromIntegral portMb,
-      Client.secure =
-        secure,
-      Client.requestHeaders =
-        assembleRawHeaders requestHeaders,
-      Client.path =
-        assemblePathString path,
-      Client.queryString =
-        assembleQueryString query,
-      Client.requestBody =
-        Client.RequestBodyBS body,
-      Client.method =
-        method,
-      Client.redirectCount =
-        configMaxRedirects,
-      Client.responseTimeout =
-        Client.responseTimeoutMicro (round (configTimeout * 1000000))
+    { Client.host = coerce urlHost,
+      Client.port = maybe (bool 80 443 urlSecure) fromIntegral urlPort,
+      Client.secure = urlSecure,
+      Client.requestHeaders = assembleRawHeaders requestHeaders,
+      Client.path = assemblePathString urlPath,
+      Client.queryString = assembleQueryString urlQuery,
+      Client.requestBody = Client.RequestBodyBS body,
+      Client.method = method,
+      Client.redirectCount = configMaxRedirects,
+      Client.responseTimeout = Client.responseTimeoutMicro (round (configTimeout * 1000000))
     }
 
 -------------------------
@@ -351,13 +376,6 @@ parseJsonBody =
 
 -------------------------
 
-newtype Host
-  = Host ByteString
-
-instance IsString Host where
-  fromString =
-    textHost . fromString
-
 textHost :: Text -> Host
 textHost =
   Host . Serialization.execute . Serialization.domain
@@ -366,14 +384,6 @@ textHost =
 
 -------------------------
 
-newtype Path
-  = Path (Seq Text)
-  deriving (Semigroup, Monoid)
-
-instance IsString Path where
-  fromString =
-    textPath . fromString
-
 textPath :: Text -> Path
 textPath =
   Path . Seq.fromList . Text.split (== '/') . Text.dropAround (== '/')
@@ -381,10 +391,6 @@ textPath =
 -- * RequestHeaders
 
 -------------------------
-
-newtype RequestHeaders
-  = RequestHeaders (Seq (Text, Text))
-  deriving (Semigroup, Monoid)
 
 requestHeader :: Text -> Text -> RequestHeaders
 requestHeader name value =
