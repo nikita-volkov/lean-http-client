@@ -14,9 +14,15 @@ module LeanHttpClient
 
     -- * Session
     Session,
+    overrideTimeout,
+    overrideMaxRedirects,
     performGet,
     performPost,
     performPut,
+
+    -- ** Url
+    Url,
+    url,
 
     -- ** Host
     Host,
@@ -39,10 +45,6 @@ module LeanHttpClient
     -- ** Response headers parsing
     ResponseHeaders,
     lookupInResponseHeaders,
-
-    -- * Utils
-    assemblePathString,
-    assembleQueryString,
   )
 where
 
