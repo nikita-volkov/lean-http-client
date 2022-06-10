@@ -115,6 +115,7 @@ data QueryParam
   = FlagQueryParam Text
   | AssocQueryParam Text Text
 
+-- | Host name.
 newtype Host
   = Host ByteString
 
@@ -122,6 +123,8 @@ instance IsString Host where
   fromString =
     textHost . fromString
 
+-- | Location at some host.
+-- You can append them using the 'Monoid' instance.
 newtype Path
   = Path (Seq Text)
   deriving (Semigroup, Monoid)
