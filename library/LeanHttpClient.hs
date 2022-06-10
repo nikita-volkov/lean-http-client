@@ -1,11 +1,12 @@
--- |
--- A lightweight DSL providing for declarative definition
--- of HTTP requests and parsers.
+-- | A lightweight DSL providing for declarative definition of HTTP requests
+-- and parsers.
 --
 -- The main premise of this library is that requests are by nature coupled
--- with expectations on the possible responses. This assumption alone lets us
--- greatly simplify the API compared to lower-level libs
--- like \"http-client\" and \"wreq\" and makes the API much more type-safe.
+-- with expectations on the possible responses. You don't just issue a
+-- request and expect to get anything in the response. There is always a
+-- structure to the response that you expect. This assumption alone lets us
+-- greatly simplify the API compared to lower-level libs like \"http-client\"
+-- and \"wreq\" and makes the API much more type-safe.
 --
 -- It must be noted though that this library is in active development,
 -- so some features may be missing and radical changes to the API may come.
@@ -91,8 +92,8 @@ data Err
     UnexpectedResponseErr Text
   deriving (Show)
 
--- | Sequence of actions performing HTTP communication using a shared manager.
--- Terminates on the first error.
+-- | Sequence of actions performing HTTP communication using a shared
+-- connection manager. Terminates on the first error.
 newtype Session a
   = Session (Config -> Client.Manager -> IO (Either Err a))
   deriving
