@@ -23,9 +23,9 @@ module LeanHttpClient
     Session,
     overrideTimeout,
     overrideMaxRedirects,
-    performGet,
-    performPost,
-    performPut,
+    get,
+    post,
+    put,
 
     -- ** Url
     Url,
@@ -209,19 +209,19 @@ overrideMaxRedirects val =
   mapConfig $ \config -> config {configMaxRedirects = val}
 
 -- | Assemble a session which performs a @GET@ request.
-performGet ::
+get ::
   Url ->
   -- | Request headers.
   RequestHeaders ->
   -- | Response parser.
   ResponseParser a ->
   Session a
-performGet url requestHeaders =
+get url requestHeaders =
   performRequest
     (assembleRawRequest "GET" url requestHeaders mempty)
 
 -- | Assemble a session which performs a @POST@ request.
-performPost ::
+post ::
   Url ->
   -- | Request headers.
   RequestHeaders ->
@@ -230,12 +230,12 @@ performPost ::
   -- | Response parser.
   ResponseParser a ->
   Session a
-performPost url requestHeaders requestBody =
+post url requestHeaders requestBody =
   performRequest
     (assembleRawRequest "POST" url requestHeaders requestBody)
 
 -- | Assemble a session which performs a @PUT@ request.
-performPut ::
+put ::
   Url ->
   -- | Request headers.
   RequestHeaders ->
@@ -244,7 +244,7 @@ performPut ::
   -- | Response parser.
   ResponseParser a ->
   Session a
-performPut url requestHeaders requestBody =
+put url requestHeaders requestBody =
   performRequest
     (assembleRawRequest "PUT" url requestHeaders requestBody)
 
