@@ -2,9 +2,15 @@
 -- A lightweight DSL providing for declarative definition
 -- of HTTP requests and parsers.
 --
--- The main premise of this library is that requests are
--- by nature coupled with expectations on the possible responses.
--- It builds upon the ideas of [the Elm \"http\" library]
+-- The main premise of this library is that requests are by nature coupled
+-- with expectations on the possible responses. This assumption alone lets us
+-- greatly simplify the API compared to lower-level libs
+-- like \"http-client\" and \"wreq\" and makes the API much more type-safe.
+--
+-- It must be noted though that this library is in active development,
+-- so some features may be missing and radical changes to the API may come.
+--
+-- Some inspiration for this library comes from [the \"http\" library of Elm]
 -- (https://package.elm-lang.org/packages/elm/http/latest).
 module LeanHttpClient
   ( -- * Execution
