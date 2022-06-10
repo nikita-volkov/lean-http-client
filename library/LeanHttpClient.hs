@@ -11,6 +11,7 @@ module LeanHttpClient
     Err (..),
     runSession,
     runSessionOnGlobalManager,
+    runSessionOnTemporaryManager,
 
     -- * Session
     Session,
@@ -66,7 +67,7 @@ import qualified Distillery.Extractor as Extractor
 import LeanHttpClient.Prelude hiding (get, put)
 import qualified LeanHttpClient.Serialization as Serialization
 import qualified Network.HTTP.Client as Client
-import qualified Network.HTTP.Client.TLS
+import qualified Network.HTTP.Client.TLS as ClientTls
 
 -------------------------
 
@@ -142,17 +143,37 @@ data Url = Url
 
 data Request a
 
+-- * Config
+
 -------------------------
 
-runSession :: Session a -> Client.Manager -> IO (Either Err a)
-runSession =
-  error "TODO"
+defaultConfig :: Config
+defaultConfig =
+  Config 30 10
 
+-------------------------
+
+-- | Execute a session on the provided manager,
+-- with 30s timeout and maximum of 10 redirects for each request.
+--
+-- These settings can be overriden using 'overrideTimeout' and
+-- 'overrideMaxRedirects'.
+runSession :: Session a -> Client.Manager -> IO (Either Err a)
+runSession (Session run) manager =
+  run defaultConfig manager
+
+-- | Execute session using 'runSession' on a global manager.
 runSessionOnGlobalManager :: Session a -> IO (Either Err a)
-runSessionOnGlobalManager session =
-  do
-    manager <- Network.HTTP.Client.TLS.getGlobalManager
-    runSession session manager
+runSessionOnGlobalManager session = do
+  manager <- ClientTls.getGlobalManager
+  runSession session manager
+
+-- | Execute session using 'runSession' on a manager,
+-- which only exists for the duration of that action.
+runSessionOnTemporaryManager :: Session a -> IO (Either Err a)
+runSessionOnTemporaryManager session = do
+  manager <- ClientTls.newTlsManager
+  runSession session manager
 
 -- * Sessions
 
