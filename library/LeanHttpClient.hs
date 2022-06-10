@@ -77,6 +77,7 @@ import qualified Network.HTTP.Client.TLS as ClientTls
 
 -------------------------
 
+-- | Error during session execution.
 data Err
   = -- | Connection timed out.
     TimeoutErr
@@ -86,12 +87,16 @@ data Err
     UnexpectedResponseErr Text
   deriving (Show)
 
+-- | Sequence of actions performing HTTP communication using a shared manager.
+-- Terminates on the first error.
 newtype Session a
   = Session (Config -> Client.Manager -> IO (Either Err a))
   deriving
     (Functor, Applicative, Monad, MonadIO, MonadError Err)
     via (ExceptT Err (ReaderT Config (ReaderT Client.Manager IO)))
 
+-- | Parser of HTTP response. Use it to specify what you expect to receive
+-- from the server, when executing a request.
 newtype ResponseParser a
   = ResponseParser (Client.Response Client.BodyReader -> IO (Either Err a))
   deriving
@@ -134,6 +139,7 @@ data Config = Config
     configMaxRedirects :: Int
   }
 
+-- | URL specifying the destination of a request.
 data Url = Url
   { -- | HTTPS? HTTP otherwise.
     urlSecure :: !Bool,
