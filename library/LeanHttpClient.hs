@@ -199,29 +199,40 @@ overrideMaxRedirects :: Int -> Session a -> Session a
 overrideMaxRedirects val =
   mapConfig $ \config -> config {configMaxRedirects = val}
 
+-- | Assemble a session which performs a @GET@ request.
 performGet ::
   Url ->
+  -- | Request headers.
   RequestHeaders ->
+  -- | Response parser.
   ResponseParser a ->
   Session a
 performGet url requestHeaders =
   performRequest
     (assembleRawRequest "GET" url requestHeaders mempty)
 
+-- | Assemble a session which performs a @POST@ request.
 performPost ::
   Url ->
+  -- | Request headers.
   RequestHeaders ->
+  -- | Request body.
   ByteString ->
+  -- | Response parser.
   ResponseParser a ->
   Session a
 performPost url requestHeaders requestBody =
   performRequest
     (assembleRawRequest "POST" url requestHeaders requestBody)
 
+-- | Assemble a session which performs a @PUT@ request.
 performPut ::
   Url ->
+  -- | Request headers.
   RequestHeaders ->
+  -- | Request body.
   ByteString ->
+  -- | Response parser.
   ResponseParser a ->
   Session a
 performPut url requestHeaders requestBody =
