@@ -1,32 +1,50 @@
--- |
--- A lightweight DSL providing for declarative definition
--- of HTTP requests and parsers.
+-- | A lightweight DSL providing for declarative definition of HTTP requests
+-- and parsers.
 --
--- The main premise of this library is that requests are
--- by nature coupled with expectations on the possible responses.
--- It builds upon the ideas of [the Elm \"http\" library]
+-- The main premise of this library is that requests are by nature coupled
+-- with expectations on the possible responses. You don't just issue a
+-- request and expect to get anything in the response. There is always a
+-- structure to the response that you expect. This assumption alone lets us
+-- greatly simplify the API compared to lower-level libs like \"http-client\"
+-- and \"wreq\" and makes the API much more type-safe.
+--
+-- It must be noted though that this library is in active development,
+-- so some features may be missing and radical changes to the API may come.
+--
+-- Some inspiration for this library comes from [the \"http\" library of Elm]
 -- (https://package.elm-lang.org/packages/elm/http/latest).
 module LeanHttpClient
   ( -- * Execution
     Err (..),
     runSession,
     runSessionOnGlobalManager,
+    runSessionOnTemporaryManager,
 
     -- * Session
     Session,
-    performGet,
-    performPost,
-    performPut,
 
-    -- ** Host
+    -- ** Request issuing sessions
+    get,
+    post,
+    put,
+
+    -- ** Settings control
+    overrideTimeout,
+    overrideMaxRedirects,
+
+    -- * Url
+    Url,
+    url,
+
+    -- * Host
     Host,
     textHost,
 
-    -- ** Path
+    -- * Path
     Path,
     textPath,
 
-    -- ** Request headers
+    -- * Request headers
     RequestHeaders,
     requestHeader,
 
@@ -36,13 +54,9 @@ module LeanHttpClient
     parseJsonBody,
     deserializeBodyWithCereal,
 
-    -- ** Response headers parsing
+    -- * Response headers parsing
     ResponseHeaders,
     lookupInResponseHeaders,
-
-    -- * Utils
-    assemblePathString,
-    assembleQueryString,
   )
 where
 
@@ -64,10 +78,11 @@ import qualified Distillery.Extractor as Extractor
 import LeanHttpClient.Prelude hiding (get, put)
 import qualified LeanHttpClient.Serialization as Serialization
 import qualified Network.HTTP.Client as Client
-import qualified Network.HTTP.Client.TLS
+import qualified Network.HTTP.Client.TLS as ClientTls
 
 -------------------------
 
+-- | Error during session execution.
 data Err
   = -- | Connection timed out.
     TimeoutErr
@@ -77,12 +92,16 @@ data Err
     UnexpectedResponseErr Text
   deriving (Show)
 
+-- | Sequence of actions performing HTTP communication using a shared
+-- connection manager. Terminates on the first error.
 newtype Session a
-  = Session (Client.Manager -> IO (Either Err a))
+  = Session (Config -> Client.Manager -> IO (Either Err a))
   deriving
     (Functor, Applicative, Monad, MonadIO, MonadError Err)
-    via (ExceptT Err (ReaderT Client.Manager IO))
+    via (ExceptT Err (ReaderT Config (ReaderT Client.Manager IO)))
 
+-- | Parser of HTTP response. Use it to specify what you expect to receive
+-- from the server, when executing a request.
 newtype ResponseParser a
   = ResponseParser (Client.Response Client.BodyReader -> IO (Either Err a))
   deriving
@@ -101,71 +120,164 @@ data QueryParam
   = FlagQueryParam Text
   | AssocQueryParam Text Text
 
+-- | Host name.
+newtype Host
+  = Host ByteString
+
+instance IsString Host where
+  fromString =
+    textHost . fromString
+
+-- | Location at some host.
+-- You can append them using the 'Monoid' instance.
+newtype Path
+  = Path (Seq Text)
+  deriving (Semigroup, Monoid)
+
+instance IsString Path where
+  fromString =
+    textPath . fromString
+
+newtype RequestHeaders
+  = RequestHeaders (Seq (Text, Text))
+  deriving (Semigroup, Monoid)
+
+data Config = Config
+  { configTimeout :: DiffTime,
+    configMaxRedirects :: Int
+  }
+
+-- | URL specifying the destination of a request.
+data Url = Url
+  { -- | HTTPS? HTTP otherwise.
+    urlSecure :: !Bool,
+    -- | Host name.
+    urlHost :: !Host,
+    -- | Specific port if present. Default port for the protocol otherwise.
+    urlPort :: !(Maybe Word16),
+    -- | Path at the host.
+    urlPath :: !Path,
+    -- | Query params.
+    urlQuery :: ![(Text, Text)]
+  }
+
+data Request a
+
+-- * Config
+
 -------------------------
 
+defaultConfig :: Config
+defaultConfig =
+  Config 30 10
+
+-------------------------
+
+-- | Execute a session on the provided manager,
+-- with 30s timeout and maximum of 10 redirects for each request.
+--
+-- These settings can be overriden using 'overrideTimeout' and
+-- 'overrideMaxRedirects'.
 runSession :: Session a -> Client.Manager -> IO (Either Err a)
-runSession =
-  coerce
+runSession (Session run) manager =
+  run defaultConfig manager
 
+-- | Execute session using 'runSession' on a global manager.
 runSessionOnGlobalManager :: Session a -> IO (Either Err a)
-runSessionOnGlobalManager session =
-  do
-    manager <- Network.HTTP.Client.TLS.getGlobalManager
-    runSession session manager
+runSessionOnGlobalManager session = do
+  manager <- ClientTls.getGlobalManager
+  runSession session manager
+
+-- | Execute session using 'runSession' on a manager,
+-- which only exists for the duration of that action.
+runSessionOnTemporaryManager :: Session a -> IO (Either Err a)
+runSessionOnTemporaryManager session = do
+  manager <- ClientTls.newTlsManager
+  runSession session manager
+
+-- * Sessions
 
 -------------------------
 
-performGet ::
-  DiffTime ->
-  Int ->
-  Bool ->
-  Host ->
-  Maybe Word16 ->
-  Path ->
-  [(Text, Text)] ->
+mapConfig :: (Config -> Config) -> Session a -> Session a
+mapConfig mapper (Session run) =
+  Session $ run . mapper
+
+-- | Override the timeout setting for the provided session.
+overrideTimeout :: DiffTime -> Session a -> Session a
+overrideTimeout val =
+  mapConfig $ \config -> config {configTimeout = val}
+
+-- | Override the max redirects setting for the provided session.
+overrideMaxRedirects :: Int -> Session a -> Session a
+overrideMaxRedirects val =
+  mapConfig $ \config -> config {configMaxRedirects = val}
+
+-- | Assemble a session which performs a @GET@ request.
+get ::
+  Url ->
+  -- | Request headers.
   RequestHeaders ->
+  -- | Response parser.
   ResponseParser a ->
   Session a
-performGet timeout maxRedirects secure host portMb path query requestHeaders =
+get url requestHeaders =
   performRequest
-    (assembleRawRequest timeout maxRedirects "GET" secure host portMb path query requestHeaders mempty)
+    (assembleRawRequest "GET" url requestHeaders mempty)
 
-performPost ::
-  DiffTime ->
-  Int ->
-  Bool ->
-  Host ->
-  Maybe Word16 ->
-  Path ->
-  [(Text, Text)] ->
+-- | Assemble a session which performs a @POST@ request.
+post ::
+  Url ->
+  -- | Request headers.
   RequestHeaders ->
+  -- | Request body.
   ByteString ->
+  -- | Response parser.
   ResponseParser a ->
   Session a
-performPost timeout maxRedirects secure host portMb path query requestHeaders requestBody =
+post url requestHeaders requestBody =
   performRequest
-    (assembleRawRequest timeout maxRedirects "POST" secure host portMb path query requestHeaders requestBody)
+    (assembleRawRequest "POST" url requestHeaders requestBody)
 
-performPut ::
-  DiffTime ->
-  Int ->
-  Bool ->
-  Host ->
-  Maybe Word16 ->
-  Path ->
-  [(Text, Text)] ->
+-- | Assemble a session which performs a @PUT@ request.
+put ::
+  Url ->
+  -- | Request headers.
   RequestHeaders ->
+  -- | Request body.
   ByteString ->
+  -- | Response parser.
   ResponseParser a ->
   Session a
-performPut timeout maxRedirects secure host portMb path query requestHeaders requestBody =
+put url requestHeaders requestBody =
   performRequest
-    (assembleRawRequest timeout maxRedirects "PUT" secure host portMb path query requestHeaders requestBody)
+    (assembleRawRequest "PUT" url requestHeaders requestBody)
 
-performRequest :: Client.Request -> ResponseParser a -> Session a
+performRequest :: (Config -> Client.Request) -> ResponseParser a -> Session a
 performRequest request (ResponseParser parseResponse) =
-  Session $ \manager ->
-    catch (Client.withResponse request manager parseResponse) (return . Left . normalizeRawException)
+  Session $ \conf manager ->
+    catch
+      (Client.withResponse (request conf) manager parseResponse)
+      (return . Left . normalizeRawException)
+
+-- * Url
+
+-------------------------
+
+-- | Assemble a URL for a request.
+url ::
+  -- | HTTPS? HTTP otherwise.
+  Bool ->
+  -- | Host name.
+  Host ->
+  -- | Specific port if present. Default port for the protocol otherwise.
+  Maybe Word16 ->
+  -- | Path at the host.
+  Path ->
+  -- | Query params.
+  [(Text, Text)] ->
+  Url
+url = Url
 
 -- * HTTP-Client Assemblage
 
@@ -215,39 +327,24 @@ assembleRawHeaders (RequestHeaders seq) =
       (Ci.mk (Text.encodeUtf8 name), Text.encodeUtf8 value)
 
 assembleRawRequest ::
-  DiffTime ->
-  Int ->
   ByteString ->
-  Bool ->
-  Host ->
-  Maybe Word16 ->
-  Path ->
-  [(Text, Text)] ->
+  Url ->
   RequestHeaders ->
   ByteString ->
+  Config ->
   Client.Request
-assembleRawRequest timeout maxRedirects method secure host portMb path query requestHeaders body =
+assembleRawRequest method Url {..} requestHeaders body Config {..} =
   Client.defaultRequest
-    { Client.host =
-        coerce host,
-      Client.port =
-        maybe (bool 80 443 secure) fromIntegral portMb,
-      Client.secure =
-        secure,
-      Client.requestHeaders =
-        assembleRawHeaders requestHeaders,
-      Client.path =
-        assemblePathString path,
-      Client.queryString =
-        assembleQueryString query,
-      Client.requestBody =
-        Client.RequestBodyBS body,
-      Client.method =
-        method,
-      Client.redirectCount =
-        maxRedirects,
-      Client.responseTimeout =
-        Client.responseTimeoutMicro (round (timeout * 1000000))
+    { Client.host = coerce urlHost,
+      Client.port = maybe (bool 80 443 urlSecure) fromIntegral urlPort,
+      Client.secure = urlSecure,
+      Client.requestHeaders = assembleRawHeaders requestHeaders,
+      Client.path = assemblePathString urlPath,
+      Client.queryString = assembleQueryString urlQuery,
+      Client.requestBody = Client.RequestBodyBS body,
+      Client.method = method,
+      Client.redirectCount = configMaxRedirects,
+      Client.responseTimeout = Client.responseTimeoutMicro (round (configTimeout * 1000000))
     }
 
 -------------------------
@@ -337,13 +434,6 @@ parseJsonBody =
 
 -------------------------
 
-newtype Host
-  = Host ByteString
-
-instance IsString Host where
-  fromString =
-    textHost . fromString
-
 textHost :: Text -> Host
 textHost =
   Host . Serialization.execute . Serialization.domain
@@ -352,14 +442,6 @@ textHost =
 
 -------------------------
 
-newtype Path
-  = Path (Seq Text)
-  deriving (Semigroup, Monoid)
-
-instance IsString Path where
-  fromString =
-    textPath . fromString
-
 textPath :: Text -> Path
 textPath =
   Path . Seq.fromList . Text.split (== '/') . Text.dropAround (== '/')
@@ -367,10 +449,6 @@ textPath =
 -- * RequestHeaders
 
 -------------------------
-
-newtype RequestHeaders
-  = RequestHeaders (Seq (Text, Text))
-  deriving (Semigroup, Monoid)
 
 requestHeader :: Text -> Text -> RequestHeaders
 requestHeader name value =
