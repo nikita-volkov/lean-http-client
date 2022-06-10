@@ -4,7 +4,7 @@
 --
 -- The main premise of this library is that requests are
 -- by nature coupled with expectations on the possible responses.
--- It builds upon the ideas of the Elm \"http\" library
+-- It builds upon the ideas of [the Elm \"http\" library]
 -- (https://package.elm-lang.org/packages/elm/http/latest).
 module LeanHttpClient
   ( -- * Execution
