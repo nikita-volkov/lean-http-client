@@ -78,10 +78,10 @@ data Err
   deriving (Show)
 
 newtype Session a
-  = Session (Client.Manager -> IO (Either Err a))
+  = Session (Config -> Client.Manager -> IO (Either Err a))
   deriving
     (Functor, Applicative, Monad, MonadIO, MonadError Err)
-    via (ExceptT Err (ReaderT Client.Manager IO))
+    via (ExceptT Err (ReaderT Config (ReaderT Client.Manager IO)))
 
 newtype ResponseParser a
   = ResponseParser (Client.Response Client.BodyReader -> IO (Either Err a))
@@ -101,11 +101,18 @@ data QueryParam
   = FlagQueryParam Text
   | AssocQueryParam Text Text
 
+data Config = Config
+  { configTimeout :: DiffTime,
+    configMaxRedirects :: Int
+  }
+
+data Request a
+
 -------------------------
 
 runSession :: Session a -> Client.Manager -> IO (Either Err a)
 runSession =
-  coerce
+  error "TODO"
 
 runSessionOnGlobalManager :: Session a -> IO (Either Err a)
 runSessionOnGlobalManager session =
@@ -113,11 +120,21 @@ runSessionOnGlobalManager session =
     manager <- Network.HTTP.Client.TLS.getGlobalManager
     runSession session manager
 
+-- * Sessions
+
 -------------------------
 
+-- | Override the timeout setting for the provided session.
+overrideTimeout :: DiffTime -> Session a -> Session a
+overrideTimeout =
+  error "TODO"
+
+-- | Override the max redirects setting for the provided session.
+overrideMaxRedirects :: Int -> Session a -> Session a
+overrideMaxRedirects =
+  error "TODO"
+
 performGet ::
-  DiffTime ->
-  Int ->
   Bool ->
   Host ->
   Maybe Word16 ->
@@ -126,13 +143,11 @@ performGet ::
   RequestHeaders ->
   ResponseParser a ->
   Session a
-performGet timeout maxRedirects secure host portMb path query requestHeaders =
+performGet secure host portMb path query requestHeaders =
   performRequest
-    (assembleRawRequest timeout maxRedirects "GET" secure host portMb path query requestHeaders mempty)
+    (assembleRawRequest "GET" secure host portMb path query requestHeaders mempty)
 
 performPost ::
-  DiffTime ->
-  Int ->
   Bool ->
   Host ->
   Maybe Word16 ->
@@ -142,13 +157,11 @@ performPost ::
   ByteString ->
   ResponseParser a ->
   Session a
-performPost timeout maxRedirects secure host portMb path query requestHeaders requestBody =
+performPost secure host portMb path query requestHeaders requestBody =
   performRequest
-    (assembleRawRequest timeout maxRedirects "POST" secure host portMb path query requestHeaders requestBody)
+    (assembleRawRequest "POST" secure host portMb path query requestHeaders requestBody)
 
 performPut ::
-  DiffTime ->
-  Int ->
   Bool ->
   Host ->
   Maybe Word16 ->
@@ -158,14 +171,16 @@ performPut ::
   ByteString ->
   ResponseParser a ->
   Session a
-performPut timeout maxRedirects secure host portMb path query requestHeaders requestBody =
+performPut secure host portMb path query requestHeaders requestBody =
   performRequest
-    (assembleRawRequest timeout maxRedirects "PUT" secure host portMb path query requestHeaders requestBody)
+    (assembleRawRequest "PUT" secure host portMb path query requestHeaders requestBody)
 
-performRequest :: Client.Request -> ResponseParser a -> Session a
+performRequest :: (Config -> Client.Request) -> ResponseParser a -> Session a
 performRequest request (ResponseParser parseResponse) =
-  Session $ \manager ->
-    catch (Client.withResponse request manager parseResponse) (return . Left . normalizeRawException)
+  Session $ \conf manager ->
+    catch
+      (Client.withResponse (request conf) manager parseResponse)
+      (return . Left . normalizeRawException)
 
 -- * HTTP-Client Assemblage
 
@@ -215,8 +230,6 @@ assembleRawHeaders (RequestHeaders seq) =
       (Ci.mk (Text.encodeUtf8 name), Text.encodeUtf8 value)
 
 assembleRawRequest ::
-  DiffTime ->
-  Int ->
   ByteString ->
   Bool ->
   Host ->
@@ -225,8 +238,9 @@ assembleRawRequest ::
   [(Text, Text)] ->
   RequestHeaders ->
   ByteString ->
+  Config ->
   Client.Request
-assembleRawRequest timeout maxRedirects method secure host portMb path query requestHeaders body =
+assembleRawRequest method secure host portMb path query requestHeaders body Config {..} =
   Client.defaultRequest
     { Client.host =
         coerce host,
@@ -245,9 +259,9 @@ assembleRawRequest timeout maxRedirects method secure host portMb path query req
       Client.method =
         method,
       Client.redirectCount =
-        maxRedirects,
+        configMaxRedirects,
       Client.responseTimeout =
-        Client.responseTimeoutMicro (round (timeout * 1000000))
+        Client.responseTimeoutMicro (round (configTimeout * 1000000))
     }
 
 -------------------------
