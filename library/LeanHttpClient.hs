@@ -156,15 +156,19 @@ runSessionOnGlobalManager session =
 
 -------------------------
 
+mapConfig :: (Config -> Config) -> Session a -> Session a
+mapConfig mapper (Session run) =
+  Session $ run . mapper
+
 -- | Override the timeout setting for the provided session.
 overrideTimeout :: DiffTime -> Session a -> Session a
-overrideTimeout =
-  error "TODO"
+overrideTimeout val =
+  mapConfig $ \config -> config {configTimeout = val}
 
 -- | Override the max redirects setting for the provided session.
 overrideMaxRedirects :: Int -> Session a -> Session a
-overrideMaxRedirects =
-  error "TODO"
+overrideMaxRedirects val =
+  mapConfig $ \config -> config {configMaxRedirects = val}
 
 performGet ::
   Url ->
