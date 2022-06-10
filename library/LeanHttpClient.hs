@@ -21,25 +21,29 @@ module LeanHttpClient
 
     -- * Session
     Session,
-    overrideTimeout,
-    overrideMaxRedirects,
+
+    -- ** Request issuing sessions
     get,
     post,
     put,
 
-    -- ** Url
+    -- ** Settings control
+    overrideTimeout,
+    overrideMaxRedirects,
+
+    -- * Url
     Url,
     url,
 
-    -- ** Host
+    -- * Host
     Host,
     textHost,
 
-    -- ** Path
+    -- * Path
     Path,
     textPath,
 
-    -- ** Request headers
+    -- * Request headers
     RequestHeaders,
     requestHeader,
 
@@ -49,7 +53,7 @@ module LeanHttpClient
     parseJsonBody,
     deserializeBodyWithCereal,
 
-    -- ** Response headers parsing
+    -- * Response headers parsing
     ResponseHeaders,
     lookupInResponseHeaders,
   )
