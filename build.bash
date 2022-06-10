@@ -41,7 +41,9 @@ function build {
 }
 
 function build_haddock {
-  stack haddock \
+  stack \
+  --work-dir ".haddock.stack-work" \
+  haddock \
   --ghc-options "-j +RTS -A128m -n2m -RTS -fwarn-incomplete-patterns" \
   --fast
 }
@@ -70,5 +72,5 @@ function build_haddock_forking {
 }
 
 format
-
+build_haddock_forking
 build_and_test
