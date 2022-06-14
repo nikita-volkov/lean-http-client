@@ -90,7 +90,7 @@ data Err
     NetworkErr Text
   | -- | Unexpected response.
     UnexpectedResponseErr Text
-  deriving (Show)
+  deriving (Show, Eq)
 
 -- | Sequence of actions performing HTTP communication using a shared
 -- connection manager. Terminates on the first error.
