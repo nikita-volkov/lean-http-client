@@ -154,7 +154,7 @@ data Url = Url
     -- | Host name.
     urlHost :: !Host,
     -- | Specific port if present. Default port for the protocol otherwise.
-    urlPort :: !(Maybe Word16),
+    urlPort :: !(Maybe Int),
     -- | Path at the host.
     urlPath :: !Path,
     -- | Query params.
@@ -271,7 +271,7 @@ url ::
   -- | Host name.
   Host ->
   -- | Specific port if present. Default port for the protocol otherwise.
-  Maybe Word16 ->
+  Maybe Int ->
   -- | Path at the host.
   Path ->
   -- | Query params.
@@ -336,7 +336,7 @@ assembleRawRequest ::
 assembleRawRequest method Url {..} requestHeaders body Config {..} =
   Client.defaultRequest
     { Client.host = coerce urlHost,
-      Client.port = maybe (bool 80 443 urlSecure) fromIntegral urlPort,
+      Client.port = fromMaybe (bool 80 443 urlSecure) urlPort,
       Client.secure = urlSecure,
       Client.requestHeaders = assembleRawHeaders requestHeaders,
       Client.path = assemblePathString urlPath,
