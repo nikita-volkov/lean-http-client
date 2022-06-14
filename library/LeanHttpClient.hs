@@ -51,6 +51,7 @@ module LeanHttpClient
     -- * Response parsing
     ResponseParser,
     getStatus,
+    expectOkStatus,
     extractHeaders,
     parseJsonBody,
     deserializeBodyWithCereal,
@@ -397,6 +398,13 @@ getStatus =
         case Text.decodeUtf8' msg of
           Left err -> return $ Left $ ResponseParsingErr $ "Status message: " <> fromString (show err)
           Right msg -> return $ Right $ (code, msg)
+
+expectOkStatus :: ResponseParser ()
+expectOkStatus = do
+  (code, msg) <- getStatus
+  if code >= 300 || code < 200
+    then throwError $ ResponseParsingErr $ "Bad status: " <> showAs code <> ": " <> to msg
+    else return ()
 
 deserializeBodyWithCereal :: Cereal.Get a -> ResponseParser a
 deserializeBodyWithCereal get =
