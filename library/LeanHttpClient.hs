@@ -394,7 +394,10 @@ deserializeBodyWithCereal get =
     go decode bodyReader = do
       chunk <- Client.brRead bodyReader
       case decode chunk of
-        Cereal.Done res _ -> return $ Right res
+        Cereal.Done res rem ->
+          if ByteString.null rem
+            then return $ Right res
+            else return $ Left $ UnexpectedResponseErr "Too much input"
         Cereal.Fail err _ -> return $ Left $ UnexpectedResponseErr $ to err
         Cereal.Partial decodeNext -> go decodeNext bodyReader
 
