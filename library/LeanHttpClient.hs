@@ -88,8 +88,8 @@ data Err
     TimeoutErr
   | -- | Any other network-related problem.
     NetworkErr Text
-  | -- | Unexpected response.
-    UnexpectedResponseErr Text
+  | -- | Response body parsing.
+    ResponseBodyParsingErr Text
   deriving (Show, Eq)
 
 -- | Sequence of actions performing HTTP communication using a shared
@@ -364,7 +364,7 @@ normalizeRawException =
 
 extractRawResponse :: Extractor (Client.Response Client.BodyReader) a -> ResponseParser a
 extractRawResponse extractor =
-  ResponseParser (pure . first UnexpectedResponseErr . Extractor.extract extractor)
+  ResponseParser (pure . first ResponseBodyParsingErr . Extractor.extract extractor)
 
 -------------------------
 
@@ -397,8 +397,8 @@ deserializeBodyWithCereal get =
         Cereal.Done res rem ->
           if ByteString.null rem
             then return $ Right res
-            else return $ Left $ UnexpectedResponseErr "Too much input"
-        Cereal.Fail err _ -> return $ Left $ UnexpectedResponseErr $ to err
+            else return $ Left $ ResponseBodyParsingErr "Too much input"
+        Cereal.Fail err _ -> return $ Left $ ResponseBodyParsingErr $ to err
         Cereal.Partial decodeNext -> go decodeNext bodyReader
 
 parseResponseBodyBytes :: BsAttoparsec.Parser a -> ResponseParser a
@@ -418,16 +418,16 @@ parseResponseBodyBytes parser =
                       <> ". "
                       <> "Remainder: "
                       <> fromString (show remainder)
-               in Left $ UnexpectedResponseErr $ msg
+               in Left $ ResponseBodyParsingErr $ msg
             BsAttoparsec.Partial _ ->
-              Left (UnexpectedResponseErr "Response data interrupted")
+              Left (ResponseBodyParsingErr "Response data interrupted")
         )
 
 extractAesonValue :: Extractor Aeson.Value a -> ResponseParser a
 extractAesonValue extractor =
   do
     aesonValue <- parseResponseBodyBytes Data.Aeson.Parser.json
-    ResponseParser $ const $ pure $ first UnexpectedResponseErr $ Extractor.extract extractor aesonValue
+    ResponseParser $ const $ pure $ first ResponseBodyParsingErr $ Extractor.extract extractor aesonValue
 
 parseJsonBody :: Avp.Value a -> ResponseParser a
 parseJsonBody =
