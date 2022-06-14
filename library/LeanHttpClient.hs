@@ -50,6 +50,7 @@ module LeanHttpClient
 
     -- * Response parsing
     ResponseParser,
+    getStatus,
     extractHeaders,
     parseJsonBody,
     deserializeBodyWithCereal,
@@ -79,6 +80,7 @@ import LeanHttpClient.Prelude hiding (get, put)
 import qualified LeanHttpClient.Serialization as Serialization
 import qualified Network.HTTP.Client as Client
 import qualified Network.HTTP.Client.TLS as ClientTls
+import qualified Network.HTTP.Types as HttpTypes
 
 -------------------------
 
@@ -88,8 +90,8 @@ data Err
     TimeoutErr
   | -- | Any other network-related problem.
     NetworkErr Text
-  | -- | Response body parsing.
-    ResponseBodyParsingErr Text
+  | -- | Response parsing.
+    ResponseParsingErr Text
   deriving (Show, Eq)
 
 -- | Sequence of actions performing HTTP communication using a shared
@@ -364,7 +366,7 @@ normalizeRawException =
 
 extractRawResponse :: Extractor (Client.Response Client.BodyReader) a -> ResponseParser a
 extractRawResponse extractor =
-  ResponseParser (pure . first ResponseBodyParsingErr . Extractor.extract extractor)
+  ResponseParser (pure . first ResponseParsingErr . Extractor.extract extractor)
 
 -------------------------
 
@@ -387,6 +389,15 @@ lookupInResponseHeaders =
 
 -------------------------
 
+getStatus :: ResponseParser (Int, Text)
+getStatus =
+  ResponseParser $ \response ->
+    case Client.responseStatus response of
+      HttpTypes.Status code msg ->
+        case Text.decodeUtf8' msg of
+          Left err -> return $ Left $ ResponseParsingErr $ "Status message: " <> fromString (show err)
+          Right msg -> return $ Right $ (code, msg)
+
 deserializeBodyWithCereal :: Cereal.Get a -> ResponseParser a
 deserializeBodyWithCereal get =
   ResponseParser $ go (Cereal.runGetPartial get) . Client.responseBody
@@ -397,8 +408,8 @@ deserializeBodyWithCereal get =
         Cereal.Done res rem ->
           if ByteString.null rem
             then return $ Right res
-            else return $ Left $ ResponseBodyParsingErr "Too much input"
-        Cereal.Fail err _ -> return $ Left $ ResponseBodyParsingErr $ to err
+            else return $ Left $ ResponseParsingErr "Too much input"
+        Cereal.Fail err _ -> return $ Left $ ResponseParsingErr $ to err
         Cereal.Partial decodeNext -> go decodeNext bodyReader
 
 parseResponseBodyBytes :: BsAttoparsec.Parser a -> ResponseParser a
@@ -418,16 +429,16 @@ parseResponseBodyBytes parser =
                       <> ". "
                       <> "Remainder: "
                       <> fromString (show remainder)
-               in Left $ ResponseBodyParsingErr $ msg
+               in Left $ ResponseParsingErr $ msg
             BsAttoparsec.Partial _ ->
-              Left (ResponseBodyParsingErr "Response data interrupted")
+              Left (ResponseParsingErr "Response data interrupted")
         )
 
 extractAesonValue :: Extractor Aeson.Value a -> ResponseParser a
 extractAesonValue extractor =
   do
     aesonValue <- parseResponseBodyBytes Data.Aeson.Parser.json
-    ResponseParser $ const $ pure $ first ResponseBodyParsingErr $ Extractor.extract extractor aesonValue
+    ResponseParser $ const $ pure $ first ResponseParsingErr $ Extractor.extract extractor aesonValue
 
 parseJsonBody :: Avp.Value a -> ResponseParser a
 parseJsonBody =
