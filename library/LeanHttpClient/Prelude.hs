@@ -98,6 +98,7 @@ import Text.ParserCombinators.ReadP as Exports (ReadP, ReadS, readP_to_S, readS_
 import Text.ParserCombinators.ReadPrec as Exports (ReadPrec, readP_to_Prec, readPrec_to_P, readPrec_to_S, readS_to_Prec)
 import Text.Printf as Exports (hPrintf, printf)
 import Text.Read as Exports (Read (..), readEither, readMaybe)
+import TextBuilderDev as Exports (TextBuilder)
 import Unsafe.Coerce as Exports
 import Prelude as Exports hiding (all, and, any, concat, concatMap, elem, fail, foldl, foldl1, foldr, foldr1, id, mapM, mapM_, maximum, minimum, notElem, or, product, sequence, sequence_, sum, (.))
 

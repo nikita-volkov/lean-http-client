@@ -399,12 +399,27 @@ getStatus =
           Left err -> return $ Left $ ResponseParsingErr $ "Status message: " <> fromString (show err)
           Right msg -> return $ Right $ (code, msg)
 
+getBodyAsByteString :: ResponseParser ByteString
+getBodyAsByteString =
+  ResponseParser $ \response ->
+    fmap (Right . mconcat) $ Client.brConsume $ Client.responseBody response
+
 expectOkStatus :: ResponseParser ()
 expectOkStatus = do
   (code, msg) <- getStatus
   if code >= 300 || code < 200
-    then throwError $ ResponseParsingErr $ "Bad status: " <> showAs code <> ": " <> to msg
+    then do
+      body <- getBodyAsByteString
+      throwError $ ResponseParsingErr $ from @TextBuilder $ renderErr code msg body
     else return ()
+  where
+    renderErr code msg body =
+      case Text.decodeUtf8' body of
+        Right body
+          | not (Text.null body) ->
+              "Bad status: " <> showAs code <> ": " <> to msg <> ": " <> to body
+        _ ->
+          "Bad status: " <> showAs code <> ": " <> to msg
 
 deserializeBodyWithCereal :: Cereal.Get a -> ResponseParser a
 deserializeBodyWithCereal get =
