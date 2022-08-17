@@ -260,8 +260,14 @@ performRequest :: (Config -> Client.Request) -> ResponseParser a -> Session a
 performRequest request (ResponseParser parseResponse) =
   Session $ \conf manager ->
     catch
-      (Client.withResponse (request conf) manager parseResponse)
+      (Client.withResponseHistory (request conf) manager parseHistoriedResponse)
       (return . Left . normalizeRawException)
+  where
+    parseHistoriedResponse historiedResponse = do
+      let redirects = Client.hrRedirects historiedResponse
+          response = Client.hrFinalResponse historiedResponse
+      traceShowM $ "Redirects: " <> show redirects
+      parseResponse response
 
 -- * Url
 
