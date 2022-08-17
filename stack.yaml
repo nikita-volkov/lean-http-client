@@ -1,10 +1,1 @@
-resolver: nightly-2022-06-08
-extra-deps:
-  - aeson-value-parser-0.19.7
-  - punycode-2.0
-  - git: https://github.com/nikita-volkov/distillery
-    commit: 2c2905f2addb0d1925c43d427fcf65340ee64b2a
-  - git: https://github.com/nikita-volkov/isomorphism-class
-    commit: 33e2a25e9adeabed528d859c6e4a605062e48437
-  - git: https://github.com/nikita-volkov/text-builder-dev
-    commit: fba3bcd336f7864a1ed7a2a80b61e5a06386e63c
+resolver: https://raw.githubusercontent.com/nikita-volkov/stack-snapshot/13a943d74ea19bd920db760a56206f906acb1ef8/snapshot.yaml
