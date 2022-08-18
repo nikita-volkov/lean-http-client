@@ -426,6 +426,7 @@ deserializeBodyWithCereal get =
   ResponseParser $ go (Cereal.runGetPartial get) . Client.responseBody
   where
     go decode bodyReader = do
+      traceM $ "deserializeBodyWithCereal/brRead"
       chunk <- Client.brRead bodyReader
       case decode chunk of
         Cereal.Done res rem ->
