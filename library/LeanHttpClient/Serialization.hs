@@ -27,17 +27,36 @@ percentEncodedPathSegmentBytes =
 percentEncodedPathSegmentByte :: Word8 -> Write
 percentEncodedPathSegmentByte x =
   let reserved =
-        x >= 65 && x <= 90
-          || x >= 97 && x <= 122
-          || x >= 48 && x <= 57
-          || x >= 43 && x <= 46
-          || x == 95
-          || x == 126
-          || x == 58
-          || x == 64
-          || x == 38
-          || x == 61
-          || x == 36
+        x
+          >= 65
+          && x
+          <= 90
+          || x
+          >= 97
+          && x
+          <= 122
+          || x
+          >= 48
+          && x
+          <= 57
+          || x
+          >= 43
+          && x
+          <= 46
+          || x
+          == 95
+          || x
+          == 126
+          || x
+          == 58
+          || x
+          == 64
+          || x
+          == 38
+          || x
+          == 61
+          || x
+          == 36
    in if reserved
         then word8 x
         else percentEncodedByte x
@@ -53,13 +72,26 @@ percentEncodedQuerySegmentBytes =
 percentEncodedQuerySegmentByte :: Word8 -> Write
 percentEncodedQuerySegmentByte x =
   let reserved =
-        x >= 65 && x <= 90
-          || x >= 97 && x <= 122
-          || x >= 48 && x <= 57
-          || x == 45
-          || x == 95
-          || x == 46
-          || x == 126
+        x
+          >= 65
+          && x
+          <= 90
+          || x
+          >= 97
+          && x
+          <= 122
+          || x
+          >= 48
+          && x
+          <= 57
+          || x
+          == 45
+          || x
+          == 95
+          || x
+          == 46
+          || x
+          == 126
    in if reserved
         then word8 x
         else percentEncodedByte x

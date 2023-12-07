@@ -291,8 +291,8 @@ assemblePathString (Path seq) =
   if Seq.null seq
     then "/"
     else
-      Serialization.execute $
-        foldMap (mappend "/" . Serialization.percentEncodedPathSegmentText) seq
+      Serialization.execute
+        $ foldMap (mappend "/" . Serialization.percentEncodedPathSegmentText) seq
 
 -- |
 -- Create a query string with all those ampersands and percent-encoding
@@ -300,7 +300,7 @@ assemblePathString (Path seq) =
 --
 -- If value in a pair is empty,
 -- then no @=@ will be inserted.
-assembleQueryString :: Foldable f => f (Text, Text) -> ByteString
+assembleQueryString :: (Foldable f) => f (Text, Text) -> ByteString
 assembleQueryString f =
   foldr step finalize f True mempty
   where
