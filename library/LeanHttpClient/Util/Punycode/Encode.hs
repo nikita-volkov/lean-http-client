@@ -35,8 +35,8 @@ import qualified Data.ByteString as BS
 import Data.Char
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
-import Data.Text.Punycode.Shared
 import Data.Word
+import LeanHttpClient.Util.Punycode.Shared
 
 data PunycodeState = PunycodeState
   { n :: Int,
