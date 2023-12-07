@@ -1,0 +1,6 @@
+packages: .
+
+source-repository-package
+  type: git
+  location: https://github.com/nikita-volkov/distillery
+  tag: 7e63ebf1f0b89d68800a40d63eb9c9fc4eeb7486
