@@ -1,6 +1,7 @@
 module LeanHttpClient.Util.Punycode.Shared where
 
 import Data.Char (ord)
+import LeanHttpClient.Prelude
 
 base :: Int
 base = 36
