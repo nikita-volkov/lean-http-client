@@ -64,7 +64,8 @@ library
   other-modules:
     LeanHttpClient.Prelude
     LeanHttpClient.Serialization
-    LeanHttpClient.Util.Punycode
+    LeanHttpClient.Util.Punycode.Encode
+    LeanHttpClient.Util.Punycode.Shared
 
   build-depends:
     , aeson >=2 && <3

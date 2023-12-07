@@ -27,7 +27,7 @@ LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
 OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 -}
-module LeanHttpClient.Util.Punycode (encode) where
+module LeanHttpClient.Util.Punycode.Encode (encode) where
 
 import Control.Monad.State hiding (state)
 import Control.Monad.Writer

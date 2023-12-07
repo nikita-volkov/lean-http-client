@@ -4,7 +4,7 @@ import qualified Data.ByteString as ByteString
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import LeanHttpClient.Prelude
-import qualified LeanHttpClient.Util.Punycode as Punycode
+import qualified LeanHttpClient.Util.Punycode.Encode as Punycode
 import PtrPoker.Write
 import qualified PtrPoker.Write as Write
 
