@@ -36,6 +36,7 @@ import Data.Char
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import Data.Word
+import LeanHttpClient.Prelude
 import LeanHttpClient.Util.Punycode.Shared
 
 data PunycodeState = PunycodeState
