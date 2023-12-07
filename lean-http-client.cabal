@@ -87,7 +87,7 @@ library
     , profunctors >=5.5.2 && <6
     , ptr-poker >=0.1.2.8 && <2
     , punycode >=2.0 && <2.1
-    , selective ^>=0.7
+    , selective >=0.5 && <0.8
     , text >=1 && <4
     , text-builder-dev >=0.3.2 && <0.4
     , time >=1.9 && <2
