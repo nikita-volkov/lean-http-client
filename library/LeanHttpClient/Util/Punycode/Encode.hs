@@ -30,10 +30,8 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 module LeanHttpClient.Util.Punycode.Encode (encode) where
 
 import qualified Data.ByteString as BS
-import Data.Char
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
-import Data.Word
 import LeanHttpClient.Prelude
 import LeanHttpClient.Util.Punycode.Shared
 
