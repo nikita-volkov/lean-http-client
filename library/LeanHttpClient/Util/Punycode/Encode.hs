@@ -29,8 +29,6 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 -}
 module LeanHttpClient.Util.Punycode.Encode (encode) where
 
-import Control.Monad.State hiding (state)
-import Control.Monad.Writer
 import qualified Data.ByteString as BS
 import Data.Char
 import qualified Data.Text as T
