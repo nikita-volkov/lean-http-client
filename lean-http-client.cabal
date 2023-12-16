@@ -71,6 +71,7 @@ library
     , aeson >=2 && <3
     , aeson-value-parser >=0.19.7 && <0.20
     , attoparsec >=0.14 && <0.15
+    , attoparsec-aeson >=2.2 && <3
     , attoparsec-data >=1.0.4 && <1.1
     , base >=4.9 && <5
     , bytestring >=0.10 && <0.13
