@@ -10,7 +10,7 @@ import Control.Category as Exports
 import Control.Concurrent as Exports
 import Control.Exception as Exports
 import Control.Monad as Exports hiding (fail, forM, forM_, mapM, mapM_, msum, sequence, sequence_)
-import Control.Monad.Error.Class as Exports hiding (Error (..))
+import Control.Monad.Error.Class as Exports
 import Control.Monad.Fail as Exports
 import Control.Monad.Fix as Exports hiding (fix)
 import Control.Monad.IO.Class as Exports
@@ -86,7 +86,7 @@ import GHC.Conc as Exports hiding (orElse, threadWaitRead, threadWaitReadSTM, th
 import GHC.Exts as Exports (IsList (..), groupWith, inline, lazy, sortWith)
 import GHC.Generics as Exports (Generic)
 import GHC.IO.Exception as Exports
-import IsomorphismClass as Exports
+import LawfulConversions as Exports
 import Numeric as Exports
 import System.Environment as Exports
 import System.Exit as Exports

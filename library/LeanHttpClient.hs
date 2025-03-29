@@ -63,8 +63,6 @@ module LeanHttpClient
 where
 
 import qualified AesonValueParser as Avp
-import qualified Attoparsec.Data as AttoparsecData
-import qualified ByteString.StrictBuilder as BsBuilder
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Parser
 import qualified Data.Attoparsec.ByteString as BsAttoparsec
@@ -119,10 +117,6 @@ newtype ResponseHeaders
     --  not a byte array.
     ResponseHeaders (HashMap Text Text)
 
-data QueryParam
-  = FlagQueryParam Text
-  | AssocQueryParam Text Text
-
 -- | Host name.
 newtype Host
   = Host ByteString
@@ -163,8 +157,6 @@ data Url = Url
     -- | Query params.
     urlQuery :: ![(Text, Text)]
   }
-
-data Request a
 
 -- * Config
 
@@ -417,9 +409,9 @@ expectOkStatus = do
       case Text.decodeUtf8' body of
         Right body
           | not (Text.null body) ->
-              "Bad status: " <> showAs code <> ": " <> to msg <> ": " <> to body
+              "Bad status: " <> (from . show) code <> ": " <> to msg <> ": " <> to body
         _ ->
-          "Bad status: " <> showAs code <> ": " <> to msg
+          "Bad status: " <> (from . show) code <> ": " <> to msg
 
 deserializeBodyWithCereal :: Cereal.Get a -> ResponseParser a
 deserializeBodyWithCereal get =
@@ -432,7 +424,7 @@ deserializeBodyWithCereal get =
           if ByteString.null rem
             then return $ Right res
             else return $ Left $ ResponseParsingErr "Too much input"
-        Cereal.Fail err _ -> return $ Left $ ResponseParsingErr $ to err
+        Cereal.Fail err _ -> return $ Left $ ResponseParsingErr $ from err
         Cereal.Partial decodeNext -> go decodeNext bodyReader
 
 parseResponseBodyBytes :: BsAttoparsec.Parser a -> ResponseParser a
